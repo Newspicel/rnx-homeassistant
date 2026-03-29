@@ -7,7 +7,7 @@
 [![HACS Validation](https://github.com/julian/rnx-homeassistant/actions/workflows/validate.yml/badge.svg)](https://github.com/julian/rnx-homeassistant/actions/workflows/validate.yml)
 [![hassfest](https://github.com/julian/rnx-homeassistant/actions/workflows/hassfest.yml/badge.svg)](https://github.com/julian/rnx-homeassistant/actions/workflows/hassfest.yml)
 
-Custom [Home Assistant](https://www.home-assistant.io/) integration for [RNX](https://rnx.ch) PDU (Power Distribution Unit) devices. Provides real-time power monitoring and outlet control over the local network.
+Custom [Home Assistant](https://www.home-assistant.io/) integration for the [RNX UPDU®](https://www.rnx.ch/de_CH/updu) (Universal Power Distribution Unit). Provides real-time power monitoring and outlet control over the local network.
 
 ## Features
 
@@ -56,3 +56,11 @@ Each outlet exposes:
 | Power cycle | Button | Power-cycle the outlet |
 
 The PDU device also exposes the same seven sensors aggregated, plus a **Reboot** button.
+
+## Disclaimer
+
+This project is not affiliated with, endorsed by, or associated with [RNX Switzerland](https://www.rnx.ch). RNX, UPDU, and related trademarks are the property of their respective owners. This integration is an independent, community-driven project that communicates with RNX UPDU® devices over the local network.
+
+## License
+
+This project is licensed under the [MIT License](LICENSE).
