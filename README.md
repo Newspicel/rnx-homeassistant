@@ -4,8 +4,9 @@
 
 # RNX PDU Integration for Home Assistant
 
-[![HACS Validation](https://github.com/julian/rnx-homeassistant/actions/workflows/validate.yml/badge.svg)](https://github.com/julian/rnx-homeassistant/actions/workflows/validate.yml)
-[![hassfest](https://github.com/julian/rnx-homeassistant/actions/workflows/hassfest.yml/badge.svg)](https://github.com/julian/rnx-homeassistant/actions/workflows/hassfest.yml)
+[![HACS Validation](https://github.com/Newspicel/rnx-homeassistant/actions/workflows/validate.yml/badge.svg)](https://github.com/Newspicel/rnx-homeassistant/actions/workflows/validate.yml)
+[![hassfest](https://github.com/Newspicel/rnx-homeassistant/actions/workflows/hassfest.yml/badge.svg)](https://github.com/Newspicel/rnx-homeassistant/actions/workflows/hassfest.yml)
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=newspicel&repository=rnx-homeassistant)
 
 Custom [Home Assistant](https://www.home-assistant.io/) integration for the [RNX UPDU®](https://www.rnx.ch/de_CH/updu) (Universal Power Distribution Unit). Provides real-time power monitoring and outlet control over the local network.
 
