@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 -m json.tool)",
+      "WebFetch(domain:developers.home-assistant.io)"
+    ]
+  }
+}

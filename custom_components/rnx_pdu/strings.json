@@ -1,0 +1,46 @@
+{
+  "config": {
+    "abort": {
+      "already_configured": "This PDU is already configured.",
+      "reauth_successful": "Re-authentication successful."
+    },
+    "error": {
+      "cannot_connect": "Cannot connect to the PDU. Check the host address.",
+      "invalid_auth": "Invalid username or password."
+    },
+    "step": {
+      "user": {
+        "title": "Connect to RNX PDU",
+        "data": {
+          "host": "Host",
+          "username": "Username",
+          "password": "Password"
+        },
+        "data_description": {
+          "host": "Hostname or IP address of the RNX PDU"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Re-authenticate RNX PDU",
+        "data": {
+          "username": "Username",
+          "password": "Password"
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "power": { "name": "Power" },
+      "current": { "name": "Current" },
+      "voltage": { "name": "Voltage" },
+      "energy": { "name": "Energy" },
+      "power_factor": { "name": "Power factor" },
+      "apparent_power": { "name": "Apparent power" },
+      "reactive_power": { "name": "Reactive power" }
+    },
+    "binary_sensor": {
+      "relay_state": { "name": "Relay" }
+    }
+  }
+}
