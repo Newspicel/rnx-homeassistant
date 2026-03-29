@@ -41,6 +41,13 @@
     },
     "binary_sensor": {
       "relay_state": { "name": "Relay" }
+    },
+    "switch": {
+      "outlet_switch": { "name": "Switch" }
+    },
+    "button": {
+      "power_cycle": { "name": "Power cycle" },
+      "reboot": { "name": "Reboot" }
     }
   }
 }

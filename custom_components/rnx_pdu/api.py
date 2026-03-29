@@ -74,26 +74,14 @@ class RnxPduApi:
         _LOGGER.debug("Logged in to RNX PDU at %s", self._host)
         return data
 
-    async def fetch_live(self) -> dict[str, Any]:
-        """Fetch live meter and relay data. Re-authenticates on session expiry."""
-        if self._sid is None:
-            await self.login()
-
-        try:
-            data = await self._fetch_live_once()
-        except RnxPduAuthError:
-            _LOGGER.debug("Session expired, re-authenticating")
-            await self.login()
-            data = await self._fetch_live_once()
-
-        return data
-
-    async def _fetch_live_once(self) -> dict[str, Any]:
-        """Single attempt to fetch /api/live."""
+    async def _post_once(
+        self, path: str, payload: dict[str, Any]
+    ) -> aiohttp.ClientResponse:
+        """Single authenticated POST attempt."""
         try:
             resp = await self._session.post(
-                f"{self._base_url}/api/live",
-                json={"electricity": True, "relays": True},
+                f"{self._base_url}{path}",
+                json=payload,
                 headers={"Cookie": f"sid={self._sid}"},
                 ssl=False,
             )
@@ -103,6 +91,28 @@ class RnxPduApi:
         if resp.status in (401, 403):
             self._sid = None
             raise RnxPduAuthError("Session expired")
+
+        return resp
+
+    async def _authenticated_post(
+        self, path: str, payload: dict[str, Any]
+    ) -> aiohttp.ClientResponse:
+        """POST with auth, auto-re-auth on 401/403."""
+        if self._sid is None:
+            await self.login()
+
+        try:
+            return await self._post_once(path, payload)
+        except RnxPduAuthError:
+            _LOGGER.debug("Session expired, re-authenticating")
+            await self.login()
+            return await self._post_once(path, payload)
+
+    async def fetch_live(self) -> dict[str, Any]:
+        """Fetch live meter and relay data. Re-authenticates on session expiry."""
+        resp = await self._authenticated_post(
+            "/api/live", {"electricity": True, "relays": True}
+        )
 
         if resp.status != 200:
             raise RnxPduConnectionError(f"Unexpected status {resp.status}")
@@ -114,3 +124,39 @@ class RnxPduApi:
             raise RnxPduAuthError("Session expired")
 
         return data
+
+    async def switch_relay(
+        self, node_id: str, state: bool
+    ) -> list[dict[str, Any]]:
+        """Turn a relay on or off. Returns the full relay state list."""
+        resp = await self._authenticated_post(
+            "/api/relay/switch",
+            {"relays": [{"nodeId": node_id, "state": 1 if state else 0}]},
+        )
+        if resp.status != 200:
+            raise RnxPduConnectionError(
+                f"Unexpected status {resp.status} from relay switch"
+            )
+        data = await resp.json()
+        return data.get("relays", [])
+
+    async def cycle_relay(self, node_id: str) -> list[dict[str, Any]]:
+        """Power-cycle a relay. Returns the full relay state list."""
+        resp = await self._authenticated_post(
+            "/api/relay/switch",
+            {"relays": [{"nodeId": node_id, "cycle": True}]},
+        )
+        if resp.status != 200:
+            raise RnxPduConnectionError(
+                f"Unexpected status {resp.status} from relay cycle"
+            )
+        data = await resp.json()
+        return data.get("relays", [])
+
+    async def reboot(self) -> None:
+        """Reboot the PDU controller."""
+        resp = await self._authenticated_post("/api/reboot", {})
+        if resp.status not in (200, 204):
+            raise RnxPduConnectionError(
+                f"Unexpected status {resp.status} from reboot"
+            )

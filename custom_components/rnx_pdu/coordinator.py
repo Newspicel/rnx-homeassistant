@@ -146,6 +146,21 @@ class RnxPduCoordinator(DataUpdateCoordinator[RnxPduData]):
         self.modules = modules
         self.serial = modules[0].serial_number if modules else config_entry.entry_id
 
+    def update_relays_from_response(
+        self, raw_relays: list[dict[str, Any]]
+    ) -> None:
+        """Update relay data in-place from an API response."""
+        if self.data is None:
+            return
+        for entry in raw_relays:
+            node_id = entry.get("nodeId")
+            if node_id:
+                self.data.relays[node_id] = RelayData(
+                    operational_state=entry.get("operationalState") == 1,
+                    admin_state=entry.get("adminState") == 1,
+                )
+        self.async_set_updated_data(self.data)
+
     async def _async_update_data(self) -> RnxPduData:
         """Fetch live data from the PDU."""
         try:

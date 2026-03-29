@@ -9,7 +9,7 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from .api import RnxPduApi, RnxPduAuthError, RnxPduConnectionError
 from .coordinator import RnxPduConfigEntry, RnxPduCoordinator, parse_node_tree
 
-PLATFORMS = [Platform.SENSOR, Platform.BINARY_SENSOR]
+PLATFORMS = [Platform.SENSOR, Platform.BINARY_SENSOR, Platform.SWITCH, Platform.BUTTON]
 
 
 async def async_setup_entry(
