@@ -40,15 +40,13 @@ class RnxPduSwitch(RnxPduEntity, SwitchEntity):
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn the outlet on."""
-        raw_relays = await self.coordinator.api.switch_relay(self.node_id, state=True)
-        self.coordinator.update_relays_from_response(raw_relays)
-        await self.coordinator.async_request_refresh()
+        await self.coordinator.api.switch_relay(self.node_id, state=True)
+        await self.coordinator.async_refresh()
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the outlet off."""
-        raw_relays = await self.coordinator.api.switch_relay(self.node_id, state=False)
-        self.coordinator.update_relays_from_response(raw_relays)
-        await self.coordinator.async_request_refresh()
+        await self.coordinator.api.switch_relay(self.node_id, state=False)
+        await self.coordinator.async_refresh()
 
     @property
     def is_on(self) -> bool | None:

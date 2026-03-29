@@ -54,9 +54,8 @@ class RnxPduPowerCycleButton(RnxPduEntity, ButtonEntity):
 
     async def async_press(self) -> None:
         """Handle the button press."""
-        raw_relays = await self.coordinator.api.cycle_relay(self.node_id)
-        self.coordinator.update_relays_from_response(raw_relays)
-        await self.coordinator.async_request_refresh()
+        await self.coordinator.api.cycle_relay(self.node_id)
+        await self.coordinator.async_refresh()
 
 
 class RnxPduRebootButton(RnxPduEntity, ButtonEntity):
