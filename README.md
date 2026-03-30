@@ -1,7 +1,3 @@
-<p align="center">
-  <img src="logo.png" alt="RNX" width="300">
-</p>
-
 # RNX UPDU Integration for Home Assistant
 
 [![HACS Validation](https://github.com/Newspicel/rnx-homeassistant/actions/workflows/validate.yml/badge.svg)](https://github.com/Newspicel/rnx-homeassistant/actions/workflows/validate.yml)
