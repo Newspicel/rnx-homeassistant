@@ -1,0 +1,53 @@
+{
+  "config": {
+    "abort": {
+      "already_configured": "Diese PDU ist bereits konfiguriert.",
+      "reauth_successful": "Erneute Authentifizierung erfolgreich."
+    },
+    "error": {
+      "cannot_connect": "Verbindung zur PDU nicht möglich. Überprüfen Sie die Host-Adresse.",
+      "invalid_auth": "Ungültiger Benutzername oder Passwort."
+    },
+    "step": {
+      "user": {
+        "title": "Mit RNX UPDU verbinden",
+        "data": {
+          "host": "Host",
+          "username": "Benutzername",
+          "password": "Passwort"
+        },
+        "data_description": {
+          "host": "Hostname oder IP-Adresse der RNX UPDU"
+        }
+      },
+      "reauth_confirm": {
+        "title": "RNX UPDU erneut authentifizieren",
+        "data": {
+          "username": "Benutzername",
+          "password": "Passwort"
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "power": { "name": "Leistung" },
+      "current": { "name": "Strom" },
+      "voltage": { "name": "Spannung" },
+      "energy": { "name": "Energie" },
+      "power_factor": { "name": "Leistungsfaktor" },
+      "apparent_power": { "name": "Scheinleistung" },
+      "reactive_power": { "name": "Blindleistung" }
+    },
+    "binary_sensor": {
+      "relay_state": { "name": "Relais" }
+    },
+    "switch": {
+      "outlet_switch": { "name": "Schalter" }
+    },
+    "button": {
+      "power_cycle": { "name": "Aus- und Einschalten" },
+      "reboot": { "name": "Neustart" }
+    }
+  }
+}
