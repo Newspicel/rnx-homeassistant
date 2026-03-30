@@ -9,10 +9,18 @@ Custom [Home Assistant](https://www.home-assistant.io/) integration for the [RNX
 ## Features
 
 - **Power monitoring** per outlet and PDU-level: power (W), current (A), voltage (V), energy (kWh), power factor, apparent power (VA), reactive power (var)
+- **Environment sensors**: temperature (°C), humidity (%), differential pressure (Pa) from connected sensor probes
+- **Residual current monitoring**: RMS and DC residual current (mA) on supported hardware
 - **Outlet switching** to turn individual outlets on or off
-- **Power cycle** button per outlet
-- **Controller reboot** button
+- **Outlet lock** to prevent accidental switching of critical outlets
+- **Power cycle** button per outlet with configurable delay
+- **Controller reboot** button with optional delay and cancel
+- **Physical identification** button to blink the LED on a specific outlet or module
+- **LED brightness** control for the front-panel display
 - **Relay state** binary sensor per outlet
+- **Alarm** binary sensors for active threshold conditions (overcurrent, over-temperature, etc.)
+- **Uptime** sensor for monitoring controller availability
+- **Diagnostics** support for easy bug reporting
 
 ## Installation
 
@@ -37,7 +45,7 @@ Custom [Home Assistant](https://www.home-assistant.io/) integration for the [RNX
 
 ## Entities
 
-Each outlet exposes:
+### Per outlet
 
 | Entity | Type | Description |
 |--------|------|-------------|
@@ -49,10 +57,38 @@ Each outlet exposes:
 | Apparent power | Sensor | Apparent power in VA |
 | Reactive power | Sensor | Reactive power in var |
 | Relay | Binary sensor | Physical relay state |
+| Alarm | Binary sensor | Active alarm condition |
 | Switch | Switch | Turn outlet on/off |
+| Lock | Switch | Lock/unlock the outlet |
 | Power cycle | Button | Power-cycle the outlet |
+| Identify | Button | Blink the outlet LED for physical identification |
+| Power cycle delay | Number | Delay in seconds before outlet powers back on |
 
-The PDU device also exposes the same seven sensors aggregated, plus a **Reboot** button.
+### PDU-level
+
+| Entity | Type | Description |
+|--------|------|-------------|
+| Power / Current / Voltage / Energy / Power factor / Apparent power / Reactive power | Sensor | Aggregated values across all outlets |
+| Uptime | Sensor | Controller uptime |
+| Alarm | Binary sensor | PDU-level alarm condition |
+| Reboot | Button | Reboot the controller |
+| Cancel reboot | Button | Cancel a scheduled reboot |
+| LED brightness | Number | Front-panel LED brightness (0–4) |
+
+### Per sensor probe
+
+| Entity | Type | Description |
+|--------|------|-------------|
+| Temperature | Sensor | Temperature in °C |
+| Humidity | Sensor | Relative humidity in % |
+| Differential pressure | Sensor | Differential pressure in Pa |
+
+### Per RCM node (if supported)
+
+| Entity | Type | Description |
+|--------|------|-------------|
+| Residual current RMS | Sensor | RMS residual current in mA |
+| Residual current DC | Sensor | DC residual current in mA |
 
 ## Disclaimer
 

@@ -60,7 +60,7 @@ class RnxPduConfigFlow(ConfigFlow, domain=DOMAIN):
                 errors["base"] = "invalid_auth"
             else:
                 nodes = data.get("nodes", [])
-                _outlets, modules = parse_node_tree(nodes)
+                _outlets, modules, _sensors = parse_node_tree(nodes)
                 serial = modules[0].serial_number if modules else user_input[CONF_HOST]
 
                 await self.async_set_unique_id(serial)
