@@ -49,4 +49,5 @@ class RnxPduEntity(CoordinatorEntity[RnxPduCoordinator]):
             model=module.part_number if module else None,
             sw_version=module.firmware_version if module else None,
             serial_number=module.serial_number if module else None,
+            configuration_url=f"https://{self.coordinator.api.host}",
         )

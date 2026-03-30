@@ -39,6 +39,11 @@ class RnxPduApi:
         self._sid: str | None = None
 
     @property
+    def host(self) -> str:
+        """Return the PDU host address."""
+        return self._host
+
+    @property
     def _base_url(self) -> str:
         return f"https://{self._host}"
 
