@@ -1,4 +1,4 @@
-"""The RNX PDU integration."""
+"""The RNX UPDU integration."""
 
 from __future__ import annotations
 
@@ -15,7 +15,7 @@ PLATFORMS = [Platform.SENSOR, Platform.BINARY_SENSOR, Platform.SWITCH, Platform.
 async def async_setup_entry(
     hass, entry: RnxPduConfigEntry
 ) -> bool:
-    """Set up RNX PDU from a config entry."""
+    """Set up RNX UPDU from a config entry."""
     session = async_get_clientsession(hass, verify_ssl=False)
     api = RnxPduApi(
         entry.data[CONF_HOST],

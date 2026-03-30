@@ -1,4 +1,4 @@
-"""Constants for the RNX PDU integration."""
+"""Constants for the RNX UPDU integration."""
 
 DOMAIN = "rnx_pdu"
 DEFAULT_USERNAME = "admin"

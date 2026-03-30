@@ -1,4 +1,4 @@
-"""Binary sensor platform for RNX PDU relay states."""
+"""Binary sensor platform for RNX UPDU relay states."""
 
 from __future__ import annotations
 
@@ -25,7 +25,7 @@ async def async_setup_entry(
     config_entry: RnxPduConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Set up RNX PDU relay binary sensors."""
+    """Set up RNX UPDU relay binary sensors."""
     coordinator = config_entry.runtime_data
     entities: list[RnxPduRelaySensor] = []
 
@@ -38,7 +38,7 @@ async def async_setup_entry(
 
 
 class RnxPduRelaySensor(RnxPduEntity, BinarySensorEntity):
-    """Binary sensor for an RNX PDU outlet relay state."""
+    """Binary sensor for an RNX UPDU outlet relay state."""
 
     @property
     def is_on(self) -> bool | None:

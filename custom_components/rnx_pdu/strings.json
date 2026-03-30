@@ -10,18 +10,18 @@
     },
     "step": {
       "user": {
-        "title": "Connect to RNX PDU",
+        "title": "Connect to RNX UPDU",
         "data": {
           "host": "Host",
           "username": "Username",
           "password": "Password"
         },
         "data_description": {
-          "host": "Hostname or IP address of the RNX PDU"
+          "host": "Hostname or IP address of the RNX UPDU"
         }
       },
       "reauth_confirm": {
-        "title": "Re-authenticate RNX PDU",
+        "title": "Re-authenticate RNX UPDU",
         "data": {
           "username": "Username",
           "password": "Password"

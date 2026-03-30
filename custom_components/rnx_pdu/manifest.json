@@ -1,6 +1,6 @@
 {
   "domain": "rnx_pdu",
-  "name": "RNX PDU",
+  "name": "RNX UPDU",
   "codeowners": [],
   "config_flow": true,
   "documentation": "https://github.com/julian/rnx-homeassistant",

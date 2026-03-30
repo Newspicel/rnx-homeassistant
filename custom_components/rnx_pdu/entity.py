@@ -1,4 +1,4 @@
-"""Base entity for RNX PDU."""
+"""Base entity for RNX UPDU."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ from .coordinator import OutletInfo, RnxPduCoordinator
 
 
 class RnxPduEntity(CoordinatorEntity[RnxPduCoordinator]):
-    """Base entity for RNX PDU devices."""
+    """Base entity for RNX UPDU devices."""
 
     _attr_has_entity_name = True
 
@@ -44,7 +44,7 @@ class RnxPduEntity(CoordinatorEntity[RnxPduCoordinator]):
         module = self.coordinator.modules[0] if self.coordinator.modules else None
         return DeviceInfo(
             identifiers={(DOMAIN, self.coordinator.serial)},
-            name="RNX PDU",
+            name="RNX UPDU",
             manufacturer="RNX",
             model=module.part_number if module else None,
             sw_version=module.firmware_version if module else None,

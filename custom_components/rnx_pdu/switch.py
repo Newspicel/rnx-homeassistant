@@ -1,4 +1,4 @@
-"""Switch platform for RNX PDU outlet relays."""
+"""Switch platform for RNX UPDU outlet relays."""
 
 from __future__ import annotations
 
@@ -27,7 +27,7 @@ async def async_setup_entry(
     config_entry: RnxPduConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Set up RNX PDU outlet switches."""
+    """Set up RNX UPDU outlet switches."""
     coordinator = config_entry.runtime_data
     async_add_entities(
         RnxPduSwitch(coordinator, SWITCH_DESCRIPTION, outlet.node_id, outlet)
@@ -36,7 +36,7 @@ async def async_setup_entry(
 
 
 class RnxPduSwitch(RnxPduEntity, SwitchEntity):
-    """Switch entity for an RNX PDU outlet relay."""
+    """Switch entity for an RNX UPDU outlet relay."""
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn the outlet on."""

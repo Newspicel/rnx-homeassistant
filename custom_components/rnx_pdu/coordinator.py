@@ -1,4 +1,4 @@
-"""DataUpdateCoordinator for RNX PDU."""
+"""DataUpdateCoordinator for RNX UPDU."""
 
 from __future__ import annotations
 
@@ -122,7 +122,7 @@ def _parse_meter(raw: dict[str, Any]) -> MeterData:
 
 
 class RnxPduCoordinator(DataUpdateCoordinator[RnxPduData]):
-    """Coordinator that polls the RNX PDU for live data."""
+    """Coordinator that polls the RNX UPDU for live data."""
 
     config_entry: RnxPduConfigEntry
 

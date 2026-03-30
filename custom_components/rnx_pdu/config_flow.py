@@ -1,4 +1,4 @@
-"""Config flow for RNX PDU."""
+"""Config flow for RNX UPDU."""
 
 from __future__ import annotations
 
@@ -34,7 +34,7 @@ STEP_REAUTH_DATA_SCHEMA = vol.Schema(
 
 
 class RnxPduConfigFlow(ConfigFlow, domain=DOMAIN):
-    """Handle a config flow for RNX PDU."""
+    """Handle a config flow for RNX UPDU."""
 
     VERSION = 1
 
@@ -67,7 +67,7 @@ class RnxPduConfigFlow(ConfigFlow, domain=DOMAIN):
                 self._abort_if_unique_id_configured()
 
                 return self.async_create_entry(
-                    title=f"RNX PDU ({user_input[CONF_HOST]})",
+                    title=f"RNX UPDU ({user_input[CONF_HOST]})",
                     data=user_input,
                 )
 

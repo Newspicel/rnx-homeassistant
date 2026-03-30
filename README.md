@@ -2,7 +2,7 @@
   <img src="logo.png" alt="RNX" width="300">
 </p>
 
-# RNX PDU Integration for Home Assistant
+# RNX UPDU Integration for Home Assistant
 
 [![HACS Validation](https://github.com/Newspicel/rnx-homeassistant/actions/workflows/validate.yml/badge.svg)](https://github.com/Newspicel/rnx-homeassistant/actions/workflows/validate.yml)
 [![hassfest](https://github.com/Newspicel/rnx-homeassistant/actions/workflows/hassfest.yml/badge.svg)](https://github.com/Newspicel/rnx-homeassistant/actions/workflows/hassfest.yml)
@@ -25,7 +25,7 @@ Custom [Home Assistant](https://www.home-assistant.io/) integration for the [RNX
 1. Open HACS in Home Assistant
 2. Go to **Integrations** > **Custom repositories**
 3. Add `https://github.com/julian/rnx-homeassistant` as an **Integration**
-4. Search for "RNX PDU" and install
+4. Search for "RNX UPDU" and install
 5. Restart Home Assistant
 
 ### Manual
@@ -36,7 +36,7 @@ Custom [Home Assistant](https://www.home-assistant.io/) integration for the [RNX
 ## Configuration
 
 1. Go to **Settings** > **Devices & Services** > **Add Integration**
-2. Search for "RNX PDU"
+2. Search for "RNX UPDU"
 3. Enter the host (IP address or hostname), username, and password of your PDU
 
 ## Entities

@@ -1,4 +1,4 @@
-"""Button platform for RNX PDU power cycle and reboot."""
+"""Button platform for RNX UPDU power cycle and reboot."""
 
 from __future__ import annotations
 
@@ -33,7 +33,7 @@ async def async_setup_entry(
     config_entry: RnxPduConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Set up RNX PDU buttons."""
+    """Set up RNX UPDU buttons."""
     coordinator = config_entry.runtime_data
     entities: list[RnxPduEntity] = []
 

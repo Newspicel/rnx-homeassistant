@@ -1,4 +1,4 @@
-"""API client for RNX PDU devices."""
+"""API client for RNX UPDU devices."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 class RnxPduError(Exception):
-    """Base exception for RNX PDU."""
+    """Base exception for RNX UPDU."""
 
 
 class RnxPduConnectionError(RnxPduError):
@@ -23,7 +23,7 @@ class RnxPduAuthError(RnxPduError):
 
 
 class RnxPduApi:
-    """Async HTTP client for the RNX PDU API."""
+    """Async HTTP client for the RNX UPDU API."""
 
     def __init__(
         self,
@@ -76,7 +76,7 @@ class RnxPduApi:
             raise RnxPduAuthError("No session ID in login response")
 
         self._sid = sid
-        _LOGGER.debug("Logged in to RNX PDU at %s", self._host)
+        _LOGGER.debug("Logged in to RNX UPDU at %s", self._host)
         return data
 
     async def _post_once(

@@ -1,4 +1,4 @@
-"""Sensor platform for RNX PDU."""
+"""Sensor platform for RNX UPDU."""
 
 from __future__ import annotations
 
@@ -27,7 +27,7 @@ from .entity import RnxPduEntity
 
 @dataclass(frozen=True, kw_only=True)
 class RnxPduSensorEntityDescription(SensorEntityDescription):
-    """Describes an RNX PDU sensor."""
+    """Describes an RNX UPDU sensor."""
 
     value_fn: Callable[[MeterData], float | None]
 
@@ -103,7 +103,7 @@ async def async_setup_entry(
     config_entry: RnxPduConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Set up RNX PDU sensors."""
+    """Set up RNX UPDU sensors."""
     coordinator = config_entry.runtime_data
     entities: list[RnxPduSensor] = []
 
@@ -120,7 +120,7 @@ async def async_setup_entry(
 
 
 class RnxPduSensor(RnxPduEntity, SensorEntity):
-    """Sensor entity for an RNX PDU meter reading."""
+    """Sensor entity for an RNX UPDU meter reading."""
 
     entity_description: RnxPduSensorEntityDescription
 
