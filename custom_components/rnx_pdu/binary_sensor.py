@@ -13,7 +13,7 @@ from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .coordinator import RnxPduConfigEntry, RnxPduCoordinator
+from .coordinator import OutletInfo, RnxPduConfigEntry, RnxPduCoordinator
 from .entity import RnxPduEntity
 
 RELAY_DESCRIPTION = BinarySensorEntityDescription(
@@ -71,23 +71,39 @@ class RnxPduRelaySensor(RnxPduEntity, BinarySensorEntity):
 class RnxPduAlarmSensor(RnxPduEntity, BinarySensorEntity):
     """Binary sensor for active alarms/conditions on a node."""
 
+    _is_pdu_level: bool
+
+    def __init__(
+        self,
+        coordinator: RnxPduCoordinator,
+        description: BinarySensorEntityDescription,
+        node_id: str,
+        outlet: OutletInfo | None = None,
+    ) -> None:
+        super().__init__(coordinator, description, node_id, outlet)
+        self._is_pdu_level = node_id == "PDU"
+
+    def _active_conditions(self) -> list:
+        """Return active conditions for this entity."""
+        if self.coordinator.data is None:
+            return []
+        if self._is_pdu_level:
+            return list(self.coordinator.data.conditions)
+        return [
+            c for c in self.coordinator.data.conditions if c.node_id == self.node_id
+        ]
+
     @property
     def is_on(self) -> bool | None:
-        """Return true if any alarm condition is active for this node."""
+        """Return true if any alarm condition is active."""
         if self.coordinator.data is None:
             return None
-        return any(
-            c.node_id == self.node_id for c in self.coordinator.data.conditions
-        )
+        return bool(self._active_conditions())
 
     @property
     def extra_state_attributes(self) -> dict[str, Any] | None:
         """Return alarm condition details."""
-        if self.coordinator.data is None:
-            return None
-        active = [
-            c for c in self.coordinator.data.conditions if c.node_id == self.node_id
-        ]
+        active = self._active_conditions()
         if not active:
             return None
         return {
@@ -96,6 +112,7 @@ class RnxPduAlarmSensor(RnxPduEntity, BinarySensorEntity):
                     "severity": c.severity,
                     "metric": c.metric,
                     "threshold": c.threshold,
+                    "node_id": c.node_id,
                 }
                 for c in active
             ],
