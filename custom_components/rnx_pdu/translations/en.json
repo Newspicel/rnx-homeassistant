@@ -37,17 +37,31 @@
       "energy": { "name": "Energy" },
       "power_factor": { "name": "Power factor" },
       "apparent_power": { "name": "Apparent power" },
-      "reactive_power": { "name": "Reactive power" }
+      "reactive_power": { "name": "Reactive power" },
+      "temperature": { "name": "Temperature" },
+      "humidity": { "name": "Humidity" },
+      "differential_pressure": { "name": "Differential pressure" },
+      "rcm_rms": { "name": "Residual current RMS" },
+      "rcm_dc": { "name": "Residual current DC" },
+      "uptime": { "name": "Uptime" }
     },
     "binary_sensor": {
-      "relay_state": { "name": "Relay" }
+      "relay_state": { "name": "Relay" },
+      "alarm": { "name": "Alarm" }
     },
     "switch": {
-      "outlet_switch": { "name": "Switch" }
+      "outlet_switch": { "name": "Switch" },
+      "outlet_lock": { "name": "Lock" }
     },
     "button": {
       "power_cycle": { "name": "Power cycle" },
-      "reboot": { "name": "Reboot" }
+      "reboot": { "name": "Reboot" },
+      "cancel_reboot": { "name": "Cancel reboot" },
+      "identify": { "name": "Identify" }
+    },
+    "number": {
+      "led_brightness": { "name": "LED brightness" },
+      "powercycle_delay": { "name": "Power cycle delay" }
     }
   }
 }

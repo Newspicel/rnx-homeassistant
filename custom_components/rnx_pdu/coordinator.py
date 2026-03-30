@@ -42,12 +42,59 @@ class RelayData:
 
 
 @dataclass
+class EnvironmentData:
+    """Parsed environment sensor data for a single node."""
+
+    temperature_c: float | None = None
+    humidity_pct: float | None = None
+    pressure_pa: float | None = None
+
+
+@dataclass
+class RcmNodeData:
+    """Parsed residual current monitoring data for a single node."""
+
+    rms_ma: float | None = None
+    dc_ma: float | None = None
+
+
+@dataclass
+class ConditionInfo:
+    """Parsed active alarm/condition."""
+
+    condition_id: int
+    condition_type: int
+    severity: int
+    start: int
+    node_id: str
+    metric: int
+    threshold: int | None = None
+    end: int | None = None
+
+
+@dataclass
+class PduDeviceInfo:
+    """Static device info from /api/info."""
+
+    product_number: str
+    serial_number: str
+    device_name: str
+    revision: int
+    icm_firmware: str
+
+
+@dataclass
 class OutletInfo:
     """Static info about an outlet discovered from the node tree."""
 
     node_id: str
     label: str
     max_current: int
+    identifiable: bool = False
+    locked: bool = False
+    locked_on: bool = False
+    allow_cycle: bool = False
+    powercycle_delay: int = 0
     parent_module: ModuleInfo | None = None
 
 
@@ -60,6 +107,15 @@ class ModuleInfo:
     part_number: str
     firmware_version: str
     label: int
+    identifiable: bool = False
+
+
+@dataclass
+class SensorNodeInfo:
+    """Static info about an environment sensor node."""
+
+    node_id: str
+    aux_port: int
 
 
 @dataclass
@@ -68,12 +124,19 @@ class RnxPduData:
 
     meters: dict[str, MeterData]
     relays: dict[str, RelayData]
+    environment: dict[str, EnvironmentData]
+    rcms: dict[str, RcmNodeData]
+    conditions: list[ConditionInfo]
+    uptime_s: int | None = None
 
 
-def parse_node_tree(nodes: list[dict[str, Any]]) -> tuple[list[OutletInfo], list[ModuleInfo]]:
-    """Walk the node tree from login and extract outlet and module info."""
+def parse_node_tree(
+    nodes: list[dict[str, Any]],
+) -> tuple[list[OutletInfo], list[ModuleInfo], list[SensorNodeInfo]]:
+    """Walk the node tree from login and extract outlet, module, and sensor info."""
     modules: dict[str, ModuleInfo] = {}
     outlets: list[OutletInfo] = []
+    sensor_nodes: list[SensorNodeInfo] = []
 
     # First pass: collect modules
     for node in nodes:
@@ -86,6 +149,7 @@ def parse_node_tree(nodes: list[dict[str, Any]]) -> tuple[list[OutletInfo], list
                 part_number=pom.get("partNumber", ""),
                 firmware_version=fw.get("version", ""),
                 label=pom.get("label", 0),
+                identifiable=node.get("identifiable", False),
             )
             modules[node["nodeId"]] = info
 
@@ -93,17 +157,31 @@ def parse_node_tree(nodes: list[dict[str, Any]]) -> tuple[list[OutletInfo], list
     for node in nodes:
         if node.get("type") == 7:  # Outlet
             outlet_data = node.get("outlet", {})
+            outlet_config = node.get("config", {}).get("outlet", {})
             parent_id = node.get("parentId", "")
             outlets.append(
                 OutletInfo(
                     node_id=node["nodeId"],
                     label=outlet_data.get("label", node["nodeId"]),
                     max_current=outlet_data.get("maxCurrent", 0),
+                    identifiable=node.get("identifiable", False),
+                    locked=outlet_config.get("locked", False),
+                    locked_on=outlet_config.get("lockedOn", False),
+                    allow_cycle=outlet_config.get("allowCycle", False),
+                    powercycle_delay=outlet_config.get("powercycleDelay", 0),
                     parent_module=modules.get(parent_id),
                 )
             )
+        elif node.get("type") == 9:  # Sensor
+            sensor_data = node.get("sensor", {})
+            sensor_nodes.append(
+                SensorNodeInfo(
+                    node_id=node["nodeId"],
+                    aux_port=sensor_data.get("auxPort", 0),
+                )
+            )
 
-    return outlets, list(modules.values())
+    return outlets, list(modules.values()), sensor_nodes
 
 
 def _parse_meter(raw: dict[str, Any]) -> MeterData:
@@ -133,6 +211,9 @@ class RnxPduCoordinator(DataUpdateCoordinator[RnxPduData]):
         api: RnxPduApi,
         outlets: list[OutletInfo],
         modules: list[ModuleInfo],
+        sensor_nodes: list[SensorNodeInfo],
+        pdu_info: PduDeviceInfo | None = None,
+        led_brightness: int | None = None,
     ) -> None:
         super().__init__(
             hass,
@@ -144,7 +225,14 @@ class RnxPduCoordinator(DataUpdateCoordinator[RnxPduData]):
         self.api = api
         self.outlets = outlets
         self.modules = modules
-        self.serial = modules[0].serial_number if modules else config_entry.entry_id
+        self.sensor_nodes = sensor_nodes
+        self.pdu_info = pdu_info
+        self.led_brightness = led_brightness
+        self.serial = (
+            pdu_info.serial_number
+            if pdu_info
+            else modules[0].serial_number if modules else config_entry.entry_id
+        )
 
     async def _async_update_data(self) -> RnxPduData:
         """Fetch live data from the PDU."""
@@ -170,4 +258,60 @@ class RnxPduCoordinator(DataUpdateCoordinator[RnxPduData]):
                     admin_state=entry.get("adminState") == 1,
                 )
 
-        return RnxPduData(meters=meters, relays=relays)
+        environment: dict[str, EnvironmentData] = {}
+        for entry in raw.get("sensors", []):
+            node_id = entry.get("nodeId")
+            if node_id:
+                environment[node_id] = EnvironmentData(
+                    temperature_c=entry.get("t"),
+                    humidity_pct=entry.get("rh"),
+                    pressure_pa=entry.get("dp"),
+                )
+
+        rcms: dict[str, RcmNodeData] = {}
+        for entry in raw.get("rcms", []):
+            node_id = entry.get("nodeId")
+            if node_id:
+                rcms[node_id] = RcmNodeData(
+                    rms_ma=entry.get("rms"),
+                    dc_ma=entry.get("dc"),
+                )
+
+        # Fetch uptime (lightweight GET)
+        uptime_s: int | None = None
+        try:
+            status = await self.api.fetch_status()
+            uptime_ms = status.get("uptime")
+            if uptime_ms is not None:
+                uptime_s = uptime_ms // 1000
+        except (RnxPduAuthError, RnxPduConnectionError):
+            _LOGGER.debug("Failed to fetch uptime, skipping")
+
+        # Fetch active conditions/alarms
+        conditions: list[ConditionInfo] = []
+        try:
+            cond_data = await self.api.fetch_conditions()
+            for entry in cond_data.get("active", []):
+                conditions.append(
+                    ConditionInfo(
+                        condition_id=entry["id"],
+                        condition_type=entry["type"],
+                        severity=entry["severity"],
+                        start=entry["start"],
+                        node_id=entry["nodeId"],
+                        metric=entry["metric"],
+                        threshold=entry.get("threshold"),
+                        end=entry.get("end"),
+                    )
+                )
+        except (RnxPduAuthError, RnxPduConnectionError):
+            _LOGGER.debug("Failed to fetch conditions, skipping")
+
+        return RnxPduData(
+            meters=meters,
+            relays=relays,
+            environment=environment,
+            rcms=rcms,
+            conditions=conditions,
+            uptime_s=uptime_s,
+        )

@@ -1,4 +1,4 @@
-"""Switch platform for RNX UPDU outlet relays."""
+"""Switch platform for RNX UPDU outlet relays and outlet lock."""
 
 from __future__ import annotations
 
@@ -9,16 +9,23 @@ from homeassistant.components.switch import (
     SwitchEntity,
     SwitchEntityDescription,
 )
+from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .coordinator import RnxPduConfigEntry, RnxPduCoordinator
+from .coordinator import OutletInfo, RnxPduConfigEntry, RnxPduCoordinator
 from .entity import RnxPduEntity
 
 SWITCH_DESCRIPTION = SwitchEntityDescription(
     key="outlet_switch",
     translation_key="outlet_switch",
     device_class=SwitchDeviceClass.OUTLET,
+)
+
+LOCK_DESCRIPTION = SwitchEntityDescription(
+    key="outlet_lock",
+    translation_key="outlet_lock",
+    entity_category=EntityCategory.CONFIG,
 )
 
 
@@ -29,10 +36,17 @@ async def async_setup_entry(
 ) -> None:
     """Set up RNX UPDU outlet switches."""
     coordinator = config_entry.runtime_data
-    async_add_entities(
-        RnxPduSwitch(coordinator, SWITCH_DESCRIPTION, outlet.node_id, outlet)
-        for outlet in coordinator.outlets
-    )
+    entities: list[SwitchEntity] = []
+
+    for outlet in coordinator.outlets:
+        entities.append(
+            RnxPduSwitch(coordinator, SWITCH_DESCRIPTION, outlet.node_id, outlet)
+        )
+        entities.append(
+            RnxPduLockSwitch(coordinator, LOCK_DESCRIPTION, outlet.node_id, outlet)
+        )
+
+    async_add_entities(entities)
 
 
 class RnxPduSwitch(RnxPduEntity, SwitchEntity):
@@ -57,3 +71,43 @@ class RnxPduSwitch(RnxPduEntity, SwitchEntity):
         if relay is None:
             return None
         return relay.admin_state
+
+
+class RnxPduLockSwitch(RnxPduEntity, SwitchEntity):
+    """Switch entity to lock/unlock an outlet."""
+
+    _outlet: OutletInfo
+
+    def __init__(
+        self,
+        coordinator: RnxPduCoordinator,
+        description: SwitchEntityDescription,
+        node_id: str,
+        outlet: OutletInfo,
+    ) -> None:
+        super().__init__(coordinator, description, node_id, outlet)
+        self._outlet = outlet
+
+    async def async_turn_on(self, **kwargs: Any) -> None:
+        """Lock the outlet in its current state."""
+        relay = self.coordinator.data.relays.get(self.node_id) if self.coordinator.data else None
+        locked_on = relay.admin_state if relay else True
+        await self.coordinator.api.set_node_config(
+            self.node_id, {"outlet": {"locked": True, "lockedOn": locked_on}}
+        )
+        self._outlet.locked = True
+        self._outlet.locked_on = locked_on
+        self.async_write_ha_state()
+
+    async def async_turn_off(self, **kwargs: Any) -> None:
+        """Unlock the outlet."""
+        await self.coordinator.api.set_node_config(
+            self.node_id, {"outlet": {"locked": False}}
+        )
+        self._outlet.locked = False
+        self.async_write_ha_state()
+
+    @property
+    def is_on(self) -> bool:
+        """Return true if the outlet is locked."""
+        return self._outlet.locked

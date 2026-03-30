@@ -37,17 +37,31 @@
       "energy": { "name": "Energie" },
       "power_factor": { "name": "Leistungsfaktor" },
       "apparent_power": { "name": "Scheinleistung" },
-      "reactive_power": { "name": "Blindleistung" }
+      "reactive_power": { "name": "Blindleistung" },
+      "temperature": { "name": "Temperatur" },
+      "humidity": { "name": "Luftfeuchtigkeit" },
+      "differential_pressure": { "name": "Differenzdruck" },
+      "rcm_rms": { "name": "Fehlerstrom RMS" },
+      "rcm_dc": { "name": "Fehlerstrom DC" },
+      "uptime": { "name": "Betriebszeit" }
     },
     "binary_sensor": {
-      "relay_state": { "name": "Relais" }
+      "relay_state": { "name": "Relais" },
+      "alarm": { "name": "Alarm" }
     },
     "switch": {
-      "outlet_switch": { "name": "Schalter" }
+      "outlet_switch": { "name": "Schalter" },
+      "outlet_lock": { "name": "Sperre" }
     },
     "button": {
       "power_cycle": { "name": "Aus- und Einschalten" },
-      "reboot": { "name": "Neustart" }
+      "reboot": { "name": "Neustart" },
+      "cancel_reboot": { "name": "Neustart abbrechen" },
+      "identify": { "name": "Identifizieren" }
+    },
+    "number": {
+      "led_brightness": { "name": "LED-Helligkeit" },
+      "powercycle_delay": { "name": "Aus-/Einschaltverzögerung" }
     }
   }
 }

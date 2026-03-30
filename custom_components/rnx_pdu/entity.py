@@ -41,6 +41,18 @@ class RnxPduEntity(CoordinatorEntity[RnxPduCoordinator]):
                 via_device=(DOMAIN, self.coordinator.serial),
             )
         # PDU-level device
+        pdu = self.coordinator.pdu_info
+        if pdu:
+            return DeviceInfo(
+                identifiers={(DOMAIN, self.coordinator.serial)},
+                name=pdu.device_name or "RNX UPDU",
+                manufacturer="RNX",
+                model=pdu.product_number,
+                sw_version=pdu.icm_firmware,
+                serial_number=pdu.serial_number,
+                hw_version=str(pdu.revision) if pdu.revision else None,
+                configuration_url=f"https://{self.coordinator.api.host}",
+            )
         module = self.coordinator.modules[0] if self.coordinator.modules else None
         return DeviceInfo(
             identifiers={(DOMAIN, self.coordinator.serial)},
