@@ -28,7 +28,7 @@ Custom [Home Assistant](https://www.home-assistant.io/) integration for the [RNX
 
 1. Open HACS in Home Assistant
 2. Go to **Integrations** > **Custom repositories**
-3. Add `https://github.com/julian/rnx-homeassistant` as an **Integration**
+3. Add `https://github.com/newspicel/rnx-homeassistant` as an **Integration**
 4. Search for "RNX UPDU" and install
 5. Restart Home Assistant
 
