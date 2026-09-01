@@ -7,15 +7,20 @@ from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
+from .const import (
+    POWERCYCLE_DELAY_MAX,
+    POWERCYCLE_DELAY_MIN,
+    LedBrightness,
+)
 from .coordinator import OutletInfo, RnxPduConfigEntry, RnxPduCoordinator
-from .entity import RnxPduEntity
+from .entity import RnxPduEntity, api_errors
 
 LED_BRIGHTNESS_DESCRIPTION = NumberEntityDescription(
     key="led_brightness",
     translation_key="led_brightness",
     entity_category=EntityCategory.CONFIG,
-    native_min_value=0,
-    native_max_value=4,
+    native_min_value=int(min(LedBrightness)),
+    native_max_value=int(max(LedBrightness)),
     native_step=1,
 )
 
@@ -23,8 +28,8 @@ POWERCYCLE_DELAY_DESCRIPTION = NumberEntityDescription(
     key="powercycle_delay",
     translation_key="powercycle_delay",
     entity_category=EntityCategory.CONFIG,
-    native_min_value=0,
-    native_max_value=900,
+    native_min_value=POWERCYCLE_DELAY_MIN,
+    native_max_value=POWERCYCLE_DELAY_MAX,
     native_step=1,
     native_unit_of_measurement="s",
 )
@@ -47,8 +52,10 @@ async def async_setup_entry(
             )
         )
 
-    # Per-outlet power cycle delay
+    # Per-outlet power cycle delay (only meaningful for switched outlets)
     for outlet in coordinator.outlets:
+        if not outlet.switchable:
+            continue
         entities.append(
             RnxPduPowercycleDelayNumber(
                 coordinator, POWERCYCLE_DELAY_DESCRIPTION, outlet.node_id, outlet
@@ -69,7 +76,8 @@ class RnxPduLedBrightnessNumber(RnxPduEntity, NumberEntity):
     async def async_set_native_value(self, value: float) -> None:
         """Set LED brightness."""
         brightness = int(value)
-        await self.coordinator.api.set_led_brightness(brightness)
+        with api_errors("set LED brightness"):
+            await self.coordinator.api.set_led_brightness(brightness)
         self.coordinator.led_brightness = brightness
         self.async_write_ha_state()
 
@@ -97,8 +105,8 @@ class RnxPduPowercycleDelayNumber(RnxPduEntity, NumberEntity):
     async def async_set_native_value(self, value: float) -> None:
         """Set power cycle delay."""
         delay = int(value)
-        await self.coordinator.api.set_node_config(
-            self.node_id, {"outlet": {"powercycleDelay": delay}}
-        )
-        self._outlet.powercycle_delay = delay
+        with api_errors(f"set power cycle delay on {self.node_id}"):
+            await self.coordinator.async_update_outlet_config(
+                self._outlet, powercycleDelay=delay
+            )
         self.async_write_ha_state()

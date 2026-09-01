@@ -12,7 +12,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .coordinator import RnxPduConfigEntry, RnxPduCoordinator
-from .entity import RnxPduEntity
+from .entity import RnxPduEntity, api_errors
 
 POWER_CYCLE_DESCRIPTION = ButtonEntityDescription(
     key="power_cycle",
@@ -50,11 +50,13 @@ async def async_setup_entry(
     entities: list[ButtonEntity] = []
 
     for outlet in coordinator.outlets:
-        entities.append(
-            RnxPduPowerCycleButton(
-                coordinator, POWER_CYCLE_DESCRIPTION, outlet.node_id, outlet
+        # Power cycling needs a relay; metered-only outlets have none.
+        if outlet.switchable:
+            entities.append(
+                RnxPduPowerCycleButton(
+                    coordinator, POWER_CYCLE_DESCRIPTION, outlet.node_id, outlet
+                )
             )
-        )
         if outlet.identifiable:
             entities.append(
                 RnxPduIdentifyButton(
@@ -85,7 +87,8 @@ class RnxPduPowerCycleButton(RnxPduEntity, ButtonEntity):
 
     async def async_press(self) -> None:
         """Handle the button press."""
-        await self.coordinator.api.cycle_relay(self.node_id)
+        with api_errors(f"power cycle outlet {self.node_id}"):
+            await self.coordinator.api.cycle_relay(self.node_id)
         await self.coordinator.async_refresh()
 
 
@@ -94,7 +97,8 @@ class RnxPduRebootButton(RnxPduEntity, ButtonEntity):
 
     async def async_press(self) -> None:
         """Handle the button press."""
-        await self.coordinator.api.reboot()
+        with api_errors("reboot the controller"):
+            await self.coordinator.api.reboot()
 
 
 class RnxPduCancelRebootButton(RnxPduEntity, ButtonEntity):
@@ -102,7 +106,8 @@ class RnxPduCancelRebootButton(RnxPduEntity, ButtonEntity):
 
     async def async_press(self) -> None:
         """Handle the button press."""
-        await self.coordinator.api.cancel_reboot()
+        with api_errors("cancel the scheduled reboot"):
+            await self.coordinator.api.cancel_reboot()
 
 
 class RnxPduIdentifyButton(RnxPduEntity, ButtonEntity):
@@ -110,4 +115,5 @@ class RnxPduIdentifyButton(RnxPduEntity, ButtonEntity):
 
     async def async_press(self) -> None:
         """Handle the button press."""
-        await self.coordinator.api.identify(self.node_id)
+        with api_errors(f"identify {self.node_id}"):
+            await self.coordinator.api.identify(self.node_id)

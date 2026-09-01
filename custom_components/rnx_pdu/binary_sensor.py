@@ -40,9 +40,13 @@ async def async_setup_entry(
     entities: list[BinarySensorEntity] = []
 
     for outlet in coordinator.outlets:
-        entities.append(
-            RnxPduRelaySensor(coordinator, RELAY_DESCRIPTION, outlet.node_id, outlet)
-        )
+        # Only switched outlets have a relay to report on.
+        if outlet.switchable:
+            entities.append(
+                RnxPduRelaySensor(
+                    coordinator, RELAY_DESCRIPTION, outlet.node_id, outlet
+                )
+            )
         # Alarm per outlet
         entities.append(
             RnxPduAlarmSensor(coordinator, ALARM_DESCRIPTION, outlet.node_id, outlet)
@@ -109,10 +113,12 @@ class RnxPduAlarmSensor(RnxPduEntity, BinarySensorEntity):
         return {
             "active_conditions": [
                 {
-                    "severity": c.severity,
-                    "metric": c.metric,
+                    "severity": c.severity_name,
+                    "type": c.type_name,
+                    "metric": c.metric_name,
                     "threshold": c.threshold,
                     "node_id": c.node_id,
+                    "start": c.start,
                 }
                 for c in active
             ],

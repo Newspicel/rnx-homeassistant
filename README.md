@@ -43,6 +43,20 @@ Custom [Home Assistant](https://www.home-assistant.io/) integration for the [RNX
 2. Search for "RNX UPDU"
 3. Enter the host (IP address or hostname), username, and password of your PDU
 
+## Firmware compatibility
+
+The integration targets the UPDU Web API (BETA) as shipped with **firmware
+4.4.0**, documented at `https://<pdu-host>/apidocs-beta`.
+
+RNX notes that this API is not stable and may change between firmware
+versions, and its version tracks the firmware rather than following semantic
+versioning. The integration therefore discovers the wiring tree by the
+properties each node carries rather than by the node type numbers, which differ
+between firmware versions.
+
+Switch, lock, power cycle and relay entities are only created for outlets that
+actually have a relay; metered-only outlets get their sensors alone.
+
 ## Entities
 
 ### Per outlet
@@ -62,7 +76,7 @@ Custom [Home Assistant](https://www.home-assistant.io/) integration for the [RNX
 | Lock | Switch | Lock/unlock the outlet |
 | Power cycle | Button | Power-cycle the outlet |
 | Identify | Button | Blink the outlet LED for physical identification |
-| Power cycle delay | Number | Delay in seconds before outlet powers back on |
+| Power cycle delay | Number | Delay before the outlet powers back on (0–60 s, 0 uses the device default) |
 
 ### PDU-level
 
@@ -73,7 +87,7 @@ Custom [Home Assistant](https://www.home-assistant.io/) integration for the [RNX
 | Alarm | Binary sensor | PDU-level alarm condition |
 | Reboot | Button | Reboot the controller |
 | Cancel reboot | Button | Cancel a scheduled reboot |
-| LED brightness | Number | Front-panel LED brightness (0–4) |
+| LED brightness | Number | Front-panel LED brightness (0 = low, 1 = medium, 2 = high) |
 
 ### Per sensor probe
 

@@ -14,7 +14,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .coordinator import OutletInfo, RnxPduConfigEntry, RnxPduCoordinator
-from .entity import RnxPduEntity
+from .entity import RnxPduEntity, api_errors
 
 SWITCH_DESCRIPTION = SwitchEntityDescription(
     key="outlet_switch",
@@ -39,6 +39,9 @@ async def async_setup_entry(
     entities: list[SwitchEntity] = []
 
     for outlet in coordinator.outlets:
+        # Outlets without a relay are metered only and cannot be switched.
+        if not outlet.switchable:
+            continue
         entities.append(
             RnxPduSwitch(coordinator, SWITCH_DESCRIPTION, outlet.node_id, outlet)
         )
@@ -54,12 +57,14 @@ class RnxPduSwitch(RnxPduEntity, SwitchEntity):
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn the outlet on."""
-        await self.coordinator.api.switch_relay(self.node_id, state=True)
+        with api_errors(f"turn on outlet {self.node_id}"):
+            await self.coordinator.api.switch_relay(self.node_id, state=True)
         await self.coordinator.async_refresh()
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the outlet off."""
-        await self.coordinator.api.switch_relay(self.node_id, state=False)
+        with api_errors(f"turn off outlet {self.node_id}"):
+            await self.coordinator.api.switch_relay(self.node_id, state=False)
         await self.coordinator.async_refresh()
 
     @property
@@ -74,7 +79,12 @@ class RnxPduSwitch(RnxPduEntity, SwitchEntity):
 
 
 class RnxPduLockSwitch(RnxPduEntity, SwitchEntity):
-    """Switch entity to lock/unlock an outlet."""
+    """Switch entity to lock/unlock an outlet.
+
+    The device models this as an outlet mode built from three config flags:
+    ``locked`` off is Manual, and when locked ``lockedOn`` selects Locked-On
+    or Locked-Off (with ``allowCycle`` promoting Locked-On to Forced-On).
+    """
 
     _outlet: OutletInfo
 
@@ -90,21 +100,26 @@ class RnxPduLockSwitch(RnxPduEntity, SwitchEntity):
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Lock the outlet in its current state."""
-        relay = self.coordinator.data.relays.get(self.node_id) if self.coordinator.data else None
-        locked_on = relay.admin_state if relay else True
-        await self.coordinator.api.set_node_config(
-            self.node_id, {"outlet": {"locked": True, "lockedOn": locked_on}}
+        relay = (
+            self.coordinator.data.relays.get(self.node_id)
+            if self.coordinator.data
+            else None
         )
-        self._outlet.locked = True
-        self._outlet.locked_on = locked_on
+        # Lock the outlet in the state it is in now, assuming on if unknown.
+        state = relay.admin_state if relay else None
+        locked_on = True if state is None else state
+        with api_errors(f"lock outlet {self.node_id}"):
+            await self.coordinator.async_update_outlet_config(
+                self._outlet, locked=True, lockedOn=locked_on, allowCycle=False
+            )
         self.async_write_ha_state()
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Unlock the outlet."""
-        await self.coordinator.api.set_node_config(
-            self.node_id, {"outlet": {"locked": False}}
-        )
-        self._outlet.locked = False
+        with api_errors(f"unlock outlet {self.node_id}"):
+            await self.coordinator.async_update_outlet_config(
+                self._outlet, locked=False
+            )
         self.async_write_ha_state()
 
     @property

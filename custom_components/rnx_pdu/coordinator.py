@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import timedelta
 import logging
 from typing import Any
@@ -13,7 +13,15 @@ from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .api import RnxPduApi, RnxPduAuthError, RnxPduConnectionError
-from .const import DEFAULT_SCAN_INTERVAL, DOMAIN
+from .const import (
+    DEFAULT_SCAN_INTERVAL,
+    DOMAIN,
+    ConditionMetric,
+    ConditionSeverity,
+    ConditionType,
+    MeterQuality,
+    RelayState,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -31,14 +39,20 @@ class MeterData:
     voltage_v: float | None = None
     power_factor: float | None = None
     energy_kwh: float | None = None
+    quality: int = MeterQuality.OK
+
+    @property
+    def valid(self) -> bool:
+        """Whether the reading is fresh rather than missing or expired."""
+        return self.quality == MeterQuality.OK
 
 
 @dataclass
 class RelayData:
     """Parsed relay data for a single outlet."""
 
-    operational_state: bool = False
-    admin_state: bool = False
+    operational_state: bool | None = None
+    admin_state: bool | None = None
 
 
 @dataclass
@@ -71,6 +85,29 @@ class ConditionInfo:
     threshold: int | None = None
     end: int | None = None
 
+    @property
+    def severity_name(self) -> str:
+        """Human-readable severity."""
+        return _enum_name(ConditionSeverity, self.severity)
+
+    @property
+    def type_name(self) -> str:
+        """Human-readable condition type."""
+        return _enum_name(ConditionType, self.condition_type)
+
+    @property
+    def metric_name(self) -> str:
+        """Human-readable metric."""
+        return _enum_name(ConditionMetric, self.metric)
+
+
+def _enum_name(enum_cls: type, value: int) -> str:
+    """Return the lower-cased enum member name, or the raw value if unknown."""
+    try:
+        return enum_cls(value).name.lower()
+    except ValueError:
+        return str(value)
+
 
 @dataclass
 class PduDeviceInfo:
@@ -91,6 +128,7 @@ class OutletInfo:
     label: str
     max_current: int
     identifiable: bool = False
+    switchable: bool = False
     locked: bool = False
     locked_on: bool = False
     allow_cycle: bool = False
@@ -126,54 +164,61 @@ class RnxPduData:
     relays: dict[str, RelayData]
     environment: dict[str, EnvironmentData]
     rcms: dict[str, RcmNodeData]
-    conditions: list[ConditionInfo]
+    conditions: list[ConditionInfo] = field(default_factory=list)
     uptime_s: int | None = None
 
 
 def parse_node_tree(
     nodes: list[dict[str, Any]],
 ) -> tuple[list[OutletInfo], list[ModuleInfo], list[SensorNodeInfo]]:
-    """Walk the node tree from login and extract outlet, module, and sensor info."""
+    """Walk the node tree and extract outlet, module, and sensor info.
+
+    Nodes are classified by the properties object they carry rather than by
+    ``Node.type``: the API documents the type as a bare integer, and its
+    numbering has already shifted between firmware releases.
+    """
     modules: dict[str, ModuleInfo] = {}
     outlets: list[OutletInfo] = []
     sensor_nodes: list[SensorNodeInfo] = []
 
-    # First pass: collect modules
+    # First pass: collect modules (POM nodes, active or passive)
     for node in nodes:
-        if node.get("type") == 5:  # Module
-            pom = node.get("pom", {})
-            fw = pom.get("runningFirmware", {})
-            info = ModuleInfo(
-                node_id=node["nodeId"],
-                serial_number=pom.get("serialNumber", ""),
-                part_number=pom.get("partNumber", ""),
-                firmware_version=fw.get("version", ""),
-                label=pom.get("label", 0),
-                identifiable=node.get("identifiable", False),
-            )
-            modules[node["nodeId"]] = info
+        pom = node.get("pom")
+        if not isinstance(pom, dict):
+            continue
+        fw = pom.get("runningFirmware") or {}
+        modules[node["nodeId"]] = ModuleInfo(
+            node_id=node["nodeId"],
+            serial_number=pom.get("serialNumber", ""),
+            part_number=pom.get("partNumber", ""),
+            firmware_version=fw.get("version", ""),
+            label=pom.get("label", 0),
+            identifiable=node.get("identifiable", False),
+        )
 
-    # Second pass: collect outlets and link to parent module
+    # Second pass: collect outlets and sensors
     for node in nodes:
-        if node.get("type") == 7:  # Outlet
-            outlet_data = node.get("outlet", {})
-            outlet_config = node.get("config", {}).get("outlet", {})
-            parent_id = node.get("parentId", "")
+        outlet_data = node.get("outlet")
+        sensor_data = node.get("sensor")
+
+        if isinstance(outlet_data, dict):
+            outlet_config = (node.get("config") or {}).get("outlet") or {}
             outlets.append(
                 OutletInfo(
                     node_id=node["nodeId"],
                     label=outlet_data.get("label", node["nodeId"]),
                     max_current=outlet_data.get("maxCurrent", 0),
                     identifiable=node.get("identifiable", False),
+                    # A relay object is only present on switched outlets.
+                    switchable=isinstance(outlet_data.get("relay"), dict),
                     locked=outlet_config.get("locked", False),
                     locked_on=outlet_config.get("lockedOn", False),
                     allow_cycle=outlet_config.get("allowCycle", False),
                     powercycle_delay=outlet_config.get("powercycleDelay", 0),
-                    parent_module=modules.get(parent_id),
+                    parent_module=modules.get(node.get("parentId", "")),
                 )
             )
-        elif node.get("type") == 9:  # Sensor
-            sensor_data = node.get("sensor", {})
+        elif isinstance(sensor_data, dict):
             sensor_nodes.append(
                 SensorNodeInfo(
                     node_id=node["nodeId"],
@@ -184,10 +229,19 @@ def parse_node_tree(
     return outlets, list(modules.values()), sensor_nodes
 
 
+def _relay_state(value: Any) -> bool | None:
+    """Map a RelayState value to on/off, or None when unknown."""
+    if value == RelayState.ON:
+        return True
+    if value in (RelayState.OFF, RelayState.AUTO_OFF):
+        return False
+    return None
+
+
 def _parse_meter(raw: dict[str, Any]) -> MeterData:
     """Parse a single meter entry from the API response."""
-    power = raw.get("power", {})
-    energy = raw.get("energy", {})
+    power = raw.get("power") or {}
+    energy = raw.get("energy") or {}
     return MeterData(
         power_w=power.get("p"),
         reactive_power_var=power.get("q"),
@@ -196,6 +250,7 @@ def _parse_meter(raw: dict[str, Any]) -> MeterData:
         voltage_v=power.get("vrms"),
         power_factor=power.get("pf"),
         energy_kwh=energy.get("eActPos"),
+        quality=raw.get("quality", MeterQuality.OK),
     )
 
 
@@ -233,6 +288,49 @@ class RnxPduCoordinator(DataUpdateCoordinator[RnxPduData]):
             if pdu_info
             else modules[0].serial_number if modules else config_entry.entry_id
         )
+        # /api/monitoring/conditions is a delta endpoint: it only returns the
+        # condition lists when they changed since the timestamp we last saw.
+        self._conditions: list[ConditionInfo] = []
+        self._conditions_tchange = 0
+
+    async def async_update_outlet_config(
+        self, outlet: OutletInfo, **overrides: Any
+    ) -> None:
+        """Write outlet config overrides and refresh the cached values."""
+        written = await self.api.update_outlet_config(outlet.node_id, **overrides)
+        outlet.powercycle_delay = written.get(
+            "powercycleDelay", outlet.powercycle_delay
+        )
+        outlet.locked = written.get("locked", outlet.locked)
+        outlet.locked_on = written.get("lockedOn", outlet.locked_on)
+        outlet.allow_cycle = written.get("allowCycle", outlet.allow_cycle)
+
+    async def _async_fetch_conditions(self) -> list[ConditionInfo]:
+        """Fetch active conditions, keeping the last list when unchanged."""
+        try:
+            data = await self.api.fetch_conditions(self._conditions_tchange)
+        except (RnxPduAuthError, RnxPduConnectionError):
+            _LOGGER.debug("Failed to fetch conditions, keeping previous state")
+            return self._conditions
+
+        if not data.get("changed"):
+            return self._conditions
+
+        self._conditions_tchange = data.get("tChange", self._conditions_tchange)
+        self._conditions = [
+            ConditionInfo(
+                condition_id=entry["id"],
+                condition_type=entry["type"],
+                severity=entry["severity"],
+                start=entry["start"],
+                node_id=entry["nodeId"],
+                metric=entry["metric"],
+                threshold=entry.get("threshold"),
+                end=entry.get("end"),
+            )
+            for entry in data.get("active") or []
+        ]
+        return self._conditions
 
     async def _async_update_data(self) -> RnxPduData:
         """Fetch live data from the PDU."""
@@ -244,24 +342,21 @@ class RnxPduCoordinator(DataUpdateCoordinator[RnxPduData]):
             raise UpdateFailed(f"Error communicating with PDU: {err}") from err
 
         meters: dict[str, MeterData] = {}
-        for entry in raw.get("meters", []):
-            node_id = entry.get("nodeId")
-            if node_id:
+        for entry in raw.get("meters") or []:
+            if node_id := entry.get("nodeId"):
                 meters[node_id] = _parse_meter(entry)
 
         relays: dict[str, RelayData] = {}
-        for entry in raw.get("relays", []):
-            node_id = entry.get("nodeId")
-            if node_id:
+        for entry in raw.get("relays") or []:
+            if node_id := entry.get("nodeId"):
                 relays[node_id] = RelayData(
-                    operational_state=entry.get("operationalState") == 1,
-                    admin_state=entry.get("adminState") == 1,
+                    operational_state=_relay_state(entry.get("operationalState")),
+                    admin_state=_relay_state(entry.get("adminState")),
                 )
 
         environment: dict[str, EnvironmentData] = {}
-        for entry in raw.get("sensors", []):
-            node_id = entry.get("nodeId")
-            if node_id:
+        for entry in raw.get("sensors") or []:
+            if node_id := entry.get("nodeId"):
                 environment[node_id] = EnvironmentData(
                     temperature_c=entry.get("t"),
                     humidity_pct=entry.get("rh"),
@@ -269,9 +364,8 @@ class RnxPduCoordinator(DataUpdateCoordinator[RnxPduData]):
                 )
 
         rcms: dict[str, RcmNodeData] = {}
-        for entry in raw.get("rcms", []):
-            node_id = entry.get("nodeId")
-            if node_id:
+        for entry in raw.get("rcms") or []:
+            if node_id := entry.get("nodeId"):
                 rcms[node_id] = RcmNodeData(
                     rms_ma=entry.get("rms"),
                     dc_ma=entry.get("dc"),
@@ -287,31 +381,13 @@ class RnxPduCoordinator(DataUpdateCoordinator[RnxPduData]):
         except (RnxPduAuthError, RnxPduConnectionError):
             _LOGGER.debug("Failed to fetch uptime, skipping")
 
-        # Fetch active conditions/alarms
-        conditions: list[ConditionInfo] = []
-        try:
-            cond_data = await self.api.fetch_conditions()
-            for entry in cond_data.get("active", []):
-                conditions.append(
-                    ConditionInfo(
-                        condition_id=entry["id"],
-                        condition_type=entry["type"],
-                        severity=entry["severity"],
-                        start=entry["start"],
-                        node_id=entry["nodeId"],
-                        metric=entry["metric"],
-                        threshold=entry.get("threshold"),
-                        end=entry.get("end"),
-                    )
-                )
-        except (RnxPduAuthError, RnxPduConnectionError):
-            _LOGGER.debug("Failed to fetch conditions, skipping")
+        conditions = await self._async_fetch_conditions()
 
         return RnxPduData(
             meters=meters,
             relays=relays,
             environment=environment,
             rcms=rcms,
-            conditions=conditions,
+            conditions=list(conditions),
             uptime_s=uptime_s,
         )

@@ -2,12 +2,26 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterator
+from contextlib import contextmanager
+
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity import EntityDescription
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
+from .api import RnxPduError
 from .const import DOMAIN
 from .coordinator import OutletInfo, RnxPduCoordinator
+
+
+@contextmanager
+def api_errors(action: str) -> Iterator[None]:
+    """Surface API failures to the user instead of only logging them."""
+    try:
+        yield
+    except RnxPduError as err:
+        raise HomeAssistantError(f"Failed to {action}: {err}") from err
 
 
 class RnxPduEntity(CoordinatorEntity[RnxPduCoordinator]):

@@ -85,4 +85,8 @@ async def async_unload_entry(
     hass, entry: RnxPduConfigEntry
 ) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    unloaded = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    if unloaded:
+        # Release the session so the device does not hold it until it expires.
+        await entry.runtime_data.api.logout()
+    return unloaded

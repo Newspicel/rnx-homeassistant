@@ -230,12 +230,22 @@ class RnxPduSensor(RnxPduEntity, SensorEntity):
 
     entity_description: RnxPduSensorEntityDescription
 
+    def _meter(self) -> MeterData | None:
+        """Return this node's meter reading, if the device reported one."""
+        if self.coordinator.data is None:
+            return None
+        return self.coordinator.data.meters.get(self.node_id)
+
+    @property
+    def available(self) -> bool:
+        """Report unavailable rather than serving a stale or missing reading."""
+        meter = self._meter()
+        return super().available and meter is not None and meter.valid
+
     @property
     def native_value(self) -> float | None:
         """Return the sensor value."""
-        if self.coordinator.data is None:
-            return None
-        meter = self.coordinator.data.meters.get(self.node_id)
+        meter = self._meter()
         if meter is None:
             return None
         return self.entity_description.value_fn(meter)
@@ -245,6 +255,15 @@ class RnxPduEnvironmentSensor(RnxPduEntity, SensorEntity):
     """Sensor entity for an RNX UPDU environment reading."""
 
     entity_description: RnxPduEnvironmentSensorDescription
+
+    @property
+    def available(self) -> bool:
+        """A sensor port reports only the quantities its probe measures.
+
+        Ports with no probe attached, and probes that do not measure this
+        quantity, omit the value entirely.
+        """
+        return super().available and self.native_value is not None
 
     @property
     def native_value(self) -> float | None:
